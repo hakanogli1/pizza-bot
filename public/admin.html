@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="uz" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Tamaqhana · Admin</title>
+  <style>
+    * { box-sizing: border-box }
+    :root { --red:#b92738; --ink:#241e1d; --muted:#655e5a; --line:#e6dfda; --soft:#f8f5f3 }
+    body { margin:0; color:var(--ink); background:#fff; font:15px/1.5 system-ui,sans-serif }
+    main { max-width:1400px; margin:auto; padding:22px clamp(12px,3vw,40px) 60px }
+    h1,h2,h3,p { margin:0 0 10px }
+    h1 { font-size:1.55rem } h2 { font-size:1.2rem }
+    button,select,input,textarea { font:inherit }
+    button,select { cursor:pointer }
+    button,select,input,textarea { border:1px solid var(--line); border-radius:10px; background:white; color:inherit; padding:8px 11px }
+    button { font-weight:650 } button:hover { background:var(--soft) }
+    button:disabled,select:disabled { opacity:.55; cursor:wait }
+    :focus-visible { outline:3px solid #5283df; outline-offset:2px }
+    .top,.bar,.actions,nav { display:flex; gap:9px; align-items:center; flex-wrap:wrap }
+    .top,.bar { justify-content:space-between }
+    .top { padding-bottom:14px; border-bottom:1px solid var(--line) }
+    .top h1,.bar h2 { margin:0 }
+    nav { margin:18px 0 24px }
+    nav button[aria-pressed=true],.primary { background:var(--ink); border-color:var(--ink); color:white }
+    .primary:hover { background:#423a38 }
+    .danger { color:var(--red) }
+    .muted,small { color:var(--muted) }
+    .info,.error,.ok { padding:10px 13px; border-radius:10px; margin:12px 0 }
+    .info { background:var(--soft) } .error { background:#fff0ee; color:#942137 }
+    .ok { background:#edf8ef; color:#256237 }
+    .scroll { margin-top:14px; overflow-x:auto; border:1px solid var(--line); border-radius:14px }
+    table { width:100%; min-width:760px; border-collapse:collapse; text-align:start }
+    th,td { padding:11px; text-align:start; vertical-align:top; border-bottom:1px solid var(--line) }
+    th { background:var(--soft); white-space:nowrap; font-size:.84rem }
+    tbody tr:last-child td { border-bottom:0 }
+    .amount { white-space:nowrap; font-weight:700 }
+    .wrap { min-width:130px; max-width:290px; overflow-wrap:anywhere }
+    .thumb { width:54px; height:54px; object-fit:cover; border-radius:9px }
+    .items { margin:0; padding-inline-start:17px; min-width:145px }
+    .editor { margin:15px 0; padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--soft) }
+    fieldset { min-width:0; border:0; margin:0; padding:0 }
+    .fields { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px }
+    .field { display:grid; gap:4px; min-width:0; font-weight:650 }
+    .field input,.field textarea { width:100%; font-weight:400 }
+    .wide { grid-column:1/-1 } textarea { resize:vertical }
+    @media(max-width:600px) { .fields { grid-template-columns:1fr } .top h1 { font-size:1.25rem } }
+  </style>
+</head>
+<body>
+  <div id="root"><main>Tamaqhana · Admin …</main></div>
+  <noscript>JavaScript kerak. / JavaScript نى ئېچىڭ.</noscript>
+
+  <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script>
+  (() => {
+    'use strict';
+
+    const root = document.getElementById('root');
+    if (!window.React || !window.ReactDOM) {
+      root.textContent = 'Internetni tekshirib, sahifani yangilang. / تورنى تەكشۈرۈپ، بەتنى يېڭىلاڭ.';
+      return;
+    }
+
+    const h = React.createElement;
+    const { useState, useEffect, useRef } = React;
+    const langs = ['uz','ug','ru','en'];
+    const langNames = ['O‘zbekcha','ئۇيغۇرچە','Русский','English'];
+    const locales = ['uz-UZ','ug-CN','ru-RU','en-US'];
+    const states = ['kutilmoqda','tayyorlanmoqda','yetkazildi'];
+
+    const words = {
+      orders:['Buyurtmalar','زاكازلار','Заказы','Orders'],
+      products:['Mahsulotlar','مەھسۇلاتلار','Товары','Products'],
+      refresh:['Yangilash','يېڭىلاش','Обновить','Refresh'],
+      live:['Bu sahifa ochiq turganda buyurtmalar har 8 soniyada yangilanadi.','بۇ بەت ئېچىلىپ تۇرغاندا زاكازلار ھەر 8 سېكۇنتتا يېڭىلىنىدۇ.','Пока вкладка открыта, заказы обновляются каждые 8 секунд.','Orders refresh every 8 seconds while this tab is visible.'],
+      add:['Pizza qo‘shish','پىتسا قوشۇش','Добавить пиццу','Add pizza'],
+      edit:['Tahrirlash','تەھرىرلەش','Изменить','Edit'],
+      remove:['O‘chirish','ئۆچۈرۈش','Удалить','Delete'],
+      save:['Saqlash','ساقلاش','Сохранить','Save'],
+      cancel:['Bekor qilish','بىكار قىلىش','Отмена','Cancel'],
+      buyer:['Mijoz','خېرىدار','Клиент','Customer'],
+      phone:['Telefon','تېلېفون','Телефон','Phone'],
+      address:['Manzil','ئادرېس','Адрес','Address'],
+      items:['Buyurtma tarkibi','زاكاز مەزمۇنى','Состав заказа','Items'],
+      total:['Jami','جەمئىي','Итого','Total'],
+      date:['Sana va vaqt','چېسلا ۋە ۋاقىت','Дата и время','Date and time'],
+      status:['Holati','ھالىتى','Статус','Status'],
+      kutilmoqda:['Kutilmoqda','كۈتۈلمەكتە','Ожидает','Pending'],
+      tayyorlanmoqda:['Tayyorlanmoqda','تەييارلىنىۋاتىدۇ','Готовится','Preparing'],
+      yetkazildi:['Yetkazildi','يەتكۈزۈلدى','Доставлен','Delivered'],
+      photo:['Rasm','رەسىم','Фото','Photo'],
+      name:['Pizza nomi','پىتسا ئىسمى','Название','Pizza name'],
+      category:['Kategoriya','تۈرى','Категория','Category'],
+      imageUrl:['Rasm havolasi (HTTPS)','رەسىم ئۇلانمىسى (HTTPS)','Ссылка на фото (HTTPS)','Image URL (HTTPS)'],
+      description:['Ta’rif','چۈشەندۈرۈش','Описание','Description'],
+      ingredients:['Tarkibi (vergul bilan ajrating)','تەركىبى (پەش بىلەن ئايرىڭ)','Ингредиенты (через запятую)','Ingredients (separate with commas)'],
+      oldPrice:['Eski narx','كونا باھا','Старая цена','Old price'],
+      newPrice:['Sotuv narxi','سېتىش باھاسى','Цена продажи','Sale price'],
+      priceHint:['Chegirma bo‘lmasa, ikki narxni bir xil kiriting.','ئېتىبار بولمىسا، ئىككى باھانى ئوخشاش يېزىڭ.','Если скидки нет, укажите одинаковые цены.','If there is no discount, enter the same price twice.'],
+      actions:['Amallar','مەشغۇلات','Действия','Actions'],
+      noOrders:['Hali buyurtma yo‘q.','تېخى زاكاز يوق.','Заказов пока нет.','No orders yet.'],
+      noProducts:['Mahsulot yo‘q.','مەھسۇلات يوق.','Товаров нет.','No products yet.'],
+      loading:['Yuklanmoqda…','يۈكلىنىۋاتىدۇ…','Загрузка…','Loading…'],
+      saved:['O‘zgarish saqlandi.','ئۆزگەرتىش ساقلاندى.','Изменения сохранены.','Changes saved.'],
+      ask:['Bu mahsulot o‘chirilsinmi?','بۇ مەھسۇلاتنى ئۆچۈرەمسىز؟','Удалить этот товар?','Delete this product?'],
+      invalid:['Maydonlarni tekshiring.','كىرگۈزگەن ئۇچۇرلارنى تەكشۈرۈڭ.','Проверьте поля.','Please check the fields.'],
+      priceError:['Eski narx sotuv narxidan past bo‘lmasin.','كونا باھا سېتىش باھاسىدىن تۆۋەن بولمىسۇن.','Старая цена не может быть ниже цены продажи.','Old price cannot be lower than the sale price.'],
+      login:['/admin sahifasini qayta ochib, admin sifatida kiring.','/admin بېتىنى قايتا ئېچىپ، باشقۇرغۇچى سۈپىتىدە كىرىڭ.','Откройте /admin и войдите снова.','Reopen /admin and sign in again.'],
+      gone:['Yozuv topilmadi. Ro‘yxatni yangilang.','بۇ تۈر تېپىلمىدى. تىزىملىكنى يېڭىلاڭ.','Запись не найдена. Обновите список.','Record not found. Refresh the list.'],
+      failed:['Serverdan tasdiq kelmadi. Ro‘yxatni yangilab tekshiring.','مۇلازىمېتىردىن جەزملەش جاۋابى كەلمىدى. تىزىملىكنى يېڭىلاپ تەكشۈرۈڭ.','Нет подтверждения от сервера. Обновите список.','No confirmation from the server. Refresh the list to check.']
+    };
+
+    const button = (label, click, props = {}) =>
+      h('button', { type:'button', onClick:click, ...props }, label);
+
+    function httpsImage(value) {
+      try {
+        const u = new URL(value);
+        return u.protocol === 'https:' && !u.username && !u.password;
+      } catch { return false; }
+    }
+
+    async function api(resource, { method = 'GET', data, signal } = {}) {
+      const headers = { Accept:'application/json' };
+      if (data !== undefined) headers['Content-Type'] = 'application/json';
+      const r = await fetch('/api/admin/' + resource, {
+        method, headers, signal,
+        credentials:'same-origin', cache:'no-store', redirect:'error',
+        body:data === undefined ? undefined : JSON.stringify(data)
+      });
+      const result = await r.json().catch(() => null);
+      if (!r.ok || result === null) {
+        throw Object.assign(new Error('Request failed'), {
+          status:r.status, detail:r.status === 400 ? result?.error : ''
+        });
+      }
+      return result;
+    }
+
+    const empty = { tab:'', rows:null, error:null, at:0 };
+
+    function useList(tab, revision) {
+      const [view, setView] = useState(empty);
+      useEffect(() => {
+        const ctrl = new AbortController();
+        let active = true, reading = false, denied = false;
+        setView(v => v.tab === tab ? { ...v, error:null } : { ...empty, tab });
+
+        async function read() {
+          if (!active || reading || denied) return;
+          reading = true;
+          try {
+            const rows = await api(tab, { signal:ctrl.signal });
+            if (!Array.isArray(rows)) throw new Error('Invalid response');
+            if (active) setView({ tab, rows, error:null, at:Date.now() });
+          } catch (error) {
+            if (active) {
+              denied = error.status === 401 || error.status === 403;
+              setView(v => ({ ...v, tab, rows:denied ? null : v.rows, error }));
+            }
+          } finally { reading = false; }
+        }
+
+        const whenVisible = () => { if (!document.hidden) read(); };
+        read();
+        const timer = tab === 'orders' ? setInterval(whenVisible, 8000) : null;
+        document.addEventListener('visibilitychange', whenVisible);
+        return () => {
+          active = false; ctrl.abort();
+          if (timer !== null) clearInterval(timer);
+          document.removeEventListener('visibilitychange', whenVisible);
+        };
+      }, [tab, revision]);
+      return view.tab === tab ? view : empty;
+    }
+
+    function App() {
+      const [lang, setLang] = useState(() => {
+        try {
+          const x = localStorage.getItem('pizza:admin:lang');
+          return langs.includes(x) ? x : 'uz';
+        } catch { return 'uz'; }
+      });
+      const [tab, setTab] = useState('orders');
+      const [revision, setRevision] = useState(0);
+      const [draft, setDraft] = useState(null);
+      const [notice, setNotice] = useState(null);
+      const [busy, setBusy] = useState(false);
+      const lock = useRef(false);
+      const view = useList(tab, revision);
+      const ix = langs.indexOf(lang);
+      const locale = locales[ix];
+      const t = key => words[key]?.[ix] || key;
+      const money = new Intl.NumberFormat(locale, {
+        style:'currency', currency:'UZS', minimumFractionDigits:0, maximumFractionDigits:0
+      });
+      const refresh = () => setRevision(n => n + 1);
+
+      useEffect(() => {
+        document.documentElement.lang = lang;
+        document.documentElement.dir = lang === 'ug' ? 'rtl' : 'ltr';
+        try { localStorage.setItem('pizza:admin:lang', lang); } catch {}
+      }, [lang]);
+
+      function errorText(e) {
+        if (e.status === 401 || e.status === 403) return t('login');
+        if (e.status === 404) return t('gone');
+        if (e.status === 400) return [t('invalid'), e.detail].filter(Boolean).join(' ');
+        return t('failed');
+      }
+
+      async function write(resource, options, after) {
+        if (lock.current) return;
+        lock.current = true; setBusy(true); setNotice(null);
+        try {
+          await api(resource, options);
+          if (after) after();
+          setNotice({ key:'saved' });
+          refresh();
+        } catch (error) {
+          setNotice({ error });
+          if (error.status === 404) refresh();
+        } finally {
+          lock.current = false; setBusy(false);
+        }
+      }
+
+      function edit(p) {
+        setNotice(null);
+        setDraft({
+          id:p?.id ?? null,
+          name:p?.name || '', imageUrl:p?.imageUrl || '',
+          category:p?.category || '', description:p?.description || '',
+          ingredients:(p?.ingredients || []).join(', '),
+          oldPrice:p ? String(p.oldPrice) : '',
+          newPrice:p ? String(p.newPrice) : ''
+        });
+        requestAnimationFrame(() => document.getElementById('field-name')?.focus());
+      }
+
+      function save(e) {
+        e.preventDefault();
+        if (!draft || lock.current) return;
+        const data = {
+          name:draft.name.trim(), imageUrl:draft.imageUrl.trim(),
+          category:draft.category.trim(), description:draft.description.trim(),
+          ingredients:draft.ingredients.split(/[,\n،，]/).map(s => s.trim()).filter(Boolean),
+          oldPrice:Number(draft.oldPrice), newPrice:Number(draft.newPrice)
+        };
+        if (!data.name || !data.category || !data.description || !httpsImage(data.imageUrl)
+          || !data.ingredients.length || data.ingredients.length > 40
+          || data.ingredients.some(x => x.length > 100)
+          || ![data.oldPrice,data.newPrice].every(n => Number.isInteger(n) && n >= 1 && n <= 100000000)) {
+          setNotice({ bad:true, key:'invalid' }); return;
+        }
+        if (data.oldPrice < data.newPrice) {
+          setNotice({ bad:true, key:'priceError' }); return;
+        }
+        const id = draft.id;
+        write(id === null ? 'products' : 'products/' + id,
+          { method:id === null ? 'POST' : 'PUT', data }, () => setDraft(null));
+      }
+
+      function remove(p) {
+        if (!window.confirm(t('ask') + '\n' + p.name)) return;
+        write('products/' + p.id, { method:'DELETE' }, () => {
+          if (draft?.id === p.id) setDraft(null);
+        });
+      }
+
+      function table(columns, rows) {
+        return h('div', { className:'scroll' }, h('table', null,
+          h('thead', null, h('tr', null, columns.map(k =>
+            h('th', { key:k, scope:'col' }, t(k))))),
+          h('tbody', null, rows)));
+      }
+
+      function orderTable(rows) {
+        return table(['ID','buyer','phone','address','items','total','date','status'],
+          rows.map(o => h('tr', { key:o.id },
+            h('td', null, '#' + o.id),
+            h('td', { dir:'auto' }, o.user?.name || '—'),
+            h('td', { dir:'ltr' }, o.user?.phone || '—'),
+            h('td', { className:'wrap', dir:'auto' }, o.location || '—'),
+            h('td', null, h('ul', { className:'items' },
+              (o.items || []).map((item,i) =>
+                h('li', { key:i }, item.name + ' × ' + item.qty)))),
+            h('td', { className:'amount' }, money.format(o.totalAmount)),
+            h('td', null, h('time', { dateTime:o.createdAt },
+              new Date(o.createdAt).toLocaleString(locale))),
+            h('td', null, h('select', {
+              value:o.status, disabled:busy, 'aria-label':t('status') + ' #' + o.id,
+              onChange:e => write('orders/' + o.id + '/status', {
+                method:'PATCH', data:{ status:e.target.value }
+              })
+            }, states.map(s => h('option', { key:s, value:s }, t(s)))))
+          )));
+      }
+
+      function productTable(rows) {
+        return table(['photo','name','category','oldPrice','newPrice','actions'],
+          rows.map(p => h('tr', { key:p.id },
+            h('td', null, httpsImage(p.imageUrl)
+              ? h('img', { src:p.imageUrl, alt:p.name, className:'thumb',
+                  loading:'lazy', referrerPolicy:'no-referrer' })
+              : '🍕'),
+            h('td', { className:'wrap' }, h('strong', { dir:'auto' }, p.name),
+              h('div', null, h('small', { dir:'auto' }, p.description))),
+            h('td', { dir:'auto' }, p.category),
+            h('td', null, money.format(p.oldPrice)),
+            h('td', { className:'amount' }, money.format(p.newPrice)),
+            h('td', null, h('div', { className:'actions' },
+              button(t('edit'), () => edit(p), { disabled:busy }),
+              button(t('remove'), () => remove(p), { className:'danger', disabled:busy })))
+          )));
+      }
+
+      function editor() {
+        if (!draft) return null;
+        function field(key, attrs = {}, wide = false, multi = false) {
+          const id = 'field-' + key;
+          return h('label', { htmlFor:id, className:'field' + (wide ? ' wide' : '') },
+            t(key), h(multi ? 'textarea' : 'input', {
+              ...attrs, id, value:draft[key], required:true,
+              onChange:e => {
+                const value = e.target.value;
+                setDraft(d => d ? { ...d, [key]:value } : null);
+              }
+            }));
+        }
+        const price = { type:'number', step:1, min:1, max:100000000, dir:'ltr' };
+        return h('form', { className:'editor', onSubmit:save },
+          h('h3', null, draft.id === null ? t('add') : t('edit') + ' · #' + draft.id),
+          h('fieldset', { disabled:busy },
+            h('div', { className:'fields' },
+              field('name', { maxLength:100 }),
+              field('category', { maxLength:60 }),
+              field('imageUrl', { type:'url', maxLength:2000, dir:'ltr', placeholder:'https://…' }, true),
+              field('description', { rows:2, maxLength:1200 }, true, true),
+              field('ingredients', { rows:2, maxLength:4200, placeholder:'Mozzarella, pomidor, …' }, true, true),
+              field('oldPrice', price), field('newPrice', price)),
+            h('p', { className:'muted' }, t('priceHint')),
+            h('div', { className:'actions' },
+              h('button', { type:'submit', className:'primary' }, busy ? '…' : t('save')),
+              button(t('cancel'), () => { setDraft(null); setNotice(null); }))));
+      }
+
+      return h('main', null,
+        h('header', { className:'top' },
+          h('h1', null, '🍕 Tamaqhana · Admin'),
+          h('label', null, '🌐 ', h('select', {
+            value:lang, 'aria-label':'Til / تىل / Язык / Language',
+            onChange:e => setLang(e.target.value)
+          }, langs.map((s,i) => h('option', { key:s, value:s }, langNames[i]))))),
+        h('nav', null, ['orders','products'].map(k =>
+          button((k === 'orders' ? '🛒 ' : '🍕 ') + t(k), () => {
+            setTab(k); setNotice(null);
+          }, { key:k, disabled:busy, 'aria-pressed':tab === k }))),
+        h('section', { className:'bar' },
+          h('h2', null, t(tab)),
+          h('div', { className:'actions' },
+            button('↻ ' + t('refresh'), refresh, { disabled:busy }),
+            tab === 'products' ? button('+ ' + t('add'), () => edit(null),
+              { className:'primary', disabled:busy || draft !== null }) : null)),
+        tab === 'orders' ? h('p', { className:'info' }, t('live'),
+          view.at ? ' · ' + new Date(view.at).toLocaleTimeString(locale) : '') : null,
+        notice ? h('p', {
+          className:notice.bad || notice.error ? 'error' : 'ok', role:'status'
+        }, notice.error ? errorText(notice.error) : t(notice.key)) : null,
+        tab === 'products' ? editor() : null,
+        view.error ? h('p', { className:'error', role:'alert' }, errorText(view.error)) : null,
+        view.rows === null
+          ? (!view.error ? h('p', { className:'muted' }, t('loading')) : null)
+          : view.rows.length === 0
+            ? h('p', { className:'info' }, t(tab === 'orders' ? 'noOrders' : 'noProducts'))
+            : tab === 'orders' ? orderTable(view.rows) : productTable(view.rows)
+      );
+    }
+
+    ReactDOM.createRoot(root).render(h(App));
+  })();
+  </script>
+</body>
+</html>
